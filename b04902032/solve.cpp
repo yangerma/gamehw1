@@ -16,8 +16,7 @@ const int dy[] = {0, 1, 0, -1};
 
 int n, m;
 char mat[N][N];
-vector<PII> goal;
-PII player;
+vector<PII> goal
 
 struct board {
 	int eval;
@@ -26,46 +25,58 @@ struct board {
 	bool operator<(const board b) const {
 		return eval > b.eval;
 	}
-};
+} cur;
 
 bool solid(const char c) {
 	return c=='#' or c=='$';
 }
 
-int move(const PII cur, const int mv) {
-	PII tmp = MP(cur.F+dx[mv], cur.S+dy[mv]);
+bool valid(const int mv) {
+	PII tmp = MP(cur.player.F+dx[mv], cur.player.S+dy[mv]);
+	unzip();
 	if(mat[tmp.F][tmp.S] == '#')
-		return -1;
+		return false;
 	if(mat[tmp.F][tmp.S] == '$' and solid(mat[tmp.F+dx[mv]][tmp.S+dy[mv]]))
-		return -1;
-	int ret=0;
-	if(mat[tmp.F][tmp.S] == '$') {
-		mat[tmp.F+dx[mv]][tmp.S+dy[mv]] = '$';
-		return 1;
-	}
-	mat[tmp.F][tmp.S] = '@';
-	return ret;
+		return false;
+	return true;
 }
 
-void reverse(const PII cur, const int mv) {
-	int rv = (mv+2)&3;
-	PII tmp = MP(cur.F+dx[rv], cur.S+dy[rv]);
-	assert(!solid(mat[tmp.F][tmp.S]) and mat[cur.F][cur.S] == '@');
-	mat[tmp.F][tmp.S] = '@';
-	if(mat[cur.F+dx[mv]][cur.S+dy[mv]] == '$') {
-		mat[cur.F][cur.S] = '$';
-		mat[cur.F+dx[mv]][cur.S+dy[mv]] = '.';
+void move(const int mv) {
+	PII tmp = MP(cur.player.F+dx[mv], cur.player.S+dy[mv]);
+	if(mat[tmp.F][tmp.S] == '$') {
+		mat[tmp.F+dx[mv]][tmp.S+dy[mv]] = '$';
+		for(int i=0; i<SZ(cur.box); i++) {
+			if(cur.box[i] == tmp) {
+				cur.box[i] = MP(tmp.F+dx[mv], tmp.S+dy[mv]);
+				break;
+			}
+		}
 	}
+	mat[cur.player.F][cur.player.S] = '-';
+	cur.player = tmp;
+	mat[tmp.F][tmp.S] = '@';
+}
+// undo mv
+void reverse(const int mv) {
+	int rv = (mv+2)&3;
+	PII tmp = MP(cur.player.F+dx[rv], cur.player.S+dy[rv]);
+	PII tmp2 = MP(cur.player.F+dx[mv], cur.player.S+dy[mv]);
+	assert(!solid(mat[tmp.F][tmp.S]) and mat[cur.F][cur.S] == '@');
+	if(mat[tmp2.F][tmp2.S] == '$') {
+		mat[cur.player.F][cur.player.S] = '$';
+		for(int i=0; i<SZ(cur.box); i++) {
+			if(cur.box[i] == tmp2) {
+				cur.box[i] = cur.player;
+				break;
+			}
+		}
+		mat[cur.F+dx[mv]][cur.S+dy[mv]] = '-';
+	}
+	mat[tmp.F][tmp.S] = '@';
+	cur.player=tmp;
 }
 
 int eval() {
-	vector<PII> box;
-	for(int i=1; i<=n; i++)
-		for(int j=1; j<=m; j++) {
-			if(mat[i][j] == '@')
-				box.PB(MP(i, j));
-		}
-	assert(SZ(goal) == SZ(box));
 	int num = SZ(goal);
 	flow.init(num*2+2);
 	for(int i=0; i<num; i++)
@@ -80,13 +91,8 @@ int eval() {
 
 board zip(int _eval = -1) {
 	board ret;
-	ret.box.clear();
-	for(int i=1; i<=n; i++)
-		for(int j=1; j<=m; j++) {
-			if(mat[i][j] == '@')
-				ret.box.PB(MP(i, j));
-		}
 	ret.player=player;
+	ret.box = box;
 	if(_eval == -1)
 		ret.eval = eval();
 	else
@@ -96,6 +102,7 @@ board zip(int _eval = -1) {
 
 void init() {
 	goal.clear();
+	box.clear();
 }
 
 int main() {
@@ -119,11 +126,15 @@ int main() {
 		}
 		priority_queue<board> pque;
 		pque.push(zip());
-		while(true) {
+		while(!pque.empty()) {
 			board bd = pque.top();
 			pque.pop();
 			for(int i=0; i<4; i++) {
-				if(change
+				if(valid(i)) {
+					move(i);
+					pque.push(zip());
+					reverse(i);
+				}
 			}
 		}
 	}
