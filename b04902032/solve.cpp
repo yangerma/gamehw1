@@ -2,7 +2,6 @@
 typedef long long ull;
 typedef pair<int, int> PII;
 #define ALL(x) (x).begin(), (x).end()
-#define BFS
 
 const int N = 55;
 
@@ -11,7 +10,7 @@ const int dy[] = {0, 1, 0, -1};
 const char alph[] = "drul";
 const ull LLMAX = 1ull<<62;
 
-unordered_map<ull, ull> vis;
+unordered_map<ull, ull> vis[2];
 
 class board {
 private:
@@ -39,34 +38,6 @@ public:
 		for(PII p : box)
 			ret |= (1ull<<pos(p));
 		return ret;
-	}
-
-	void update() {
-		/*
-		int num = SZ(goal);
-		flow.init(num*2+2);
-		for(int i=0; i<num; i++) {
-			int j=0;
-			for(PII b : box)
-				flow.add(1+i, num+1+(j++), 1, abs(goal[i].F-b.F)+abs(goal[i].S-b.S));
-		}
-		for(int i=0; i<num; i++)
-			flow.add(0, 1+i, 1, 0);
-		for(int i=0; i<num; i++)
-			flow.add(num+1+i, 2*num+1, 1, 0);
-		eval = flow.max_flow().S;
-		*/
-		int j=0;
-		eval=0;
-		for(set<PII>::iterator ite=box.begin(); ite != box.end(); ite++) {
-			eval += abs(goal[j].F - ite->F) + abs(goal[j].S - ite->S);
-			j++;
-		}
-		/*
-		eval = 0;
-		for(PII p : box)
-			eval += cost[p.F][p.S];
-		*/
 	}
 
 	static board init() {
@@ -127,37 +98,52 @@ public:
 					cnt++;
 				}
 			}
-#ifndef BFS
-		st.update();
-#endif
 		return st;
 	}
 
-	bool valid(const int mv) {
-		PII tmp = MP(player.F+dx[mv], player.S+dy[mv]);
-		PII ttmp = MP(tmp.F+dx[mv], tmp.S+dy[mv]);
-		if(mat[tmp.F][tmp.S] == '#')
-			return false;
-		if(box.count(tmp) and (mat[ttmp.F][ttmp.S] == '#' or box.count(ttmp)))
-			return false;
+	bool valid(const int mv, bool rev=false) {
+		if(rev) {
+			int op = (mv+2)&3;
+			PII tmp = MP(player.F+dx[op], player.S+dy[op]);
+			if(mat[tmp.F][tmp.S] == '#' or box.count(tmp))
+				return false;
+		} else {
+			PII tmp = MP(player.F+dx[mv], player.S+dy[mv]);
+			PII ttmp = MP(tmp.F+dx[mv], tmp.S+dy[mv]);
+			if(mat[tmp.F][tmp.S] == '#')
+				return false;
+			if(box.count(tmp) and (mat[ttmp.F][ttmp.S] == '#' or box.count(ttmp)))
+				return false;
+		}
 		return true;
 	}
 
-	board move(const int mv) {
+	board move(const int mv, bool rev=false) {
 		board ret = *this;
-		PII tmp = MP(ret.player.F+dx[mv], ret.player.S+dy[mv]);
 		char ch = alph[mv];
-		bool flag=box.count(tmp);
-		if(flag) {
-			ret.box.erase(tmp);
-			ret.box.insert(MP(tmp.F+dx[mv], tmp.S+dy[mv]));
-			ch -= 32;
+		if(rev) {
+			int op = (mv+2)&3;
+			PII tmp = MP(player.F+dx[op], player.S+dy[op]);
+			PII ttmp = MP(player.F+dx[mv], player.S+dy[mv]);
+			bool flag = box.count(ttmp);
+			if(flag) {
+				ret.box.erase(ttmp);
+				ret.box.insert(player);
+				ch -= 32;
+			}
+			ret.steps += ch;
+			ret.player = tmp;
+		} else {
+			PII tmp = MP(ret.player.F+dx[mv], ret.player.S+dy[mv]);
+			bool flag=box.count(tmp);
+			if(flag) {
+				ret.box.erase(tmp);
+				ret.box.insert(MP(tmp.F+dx[mv], tmp.S+dy[mv]));
+				ch -= 32;
+			}
+			ret.steps += ch;
+			ret.player = tmp;
 		}
-		ret.steps.PB(ch);
-		ret.player = tmp;
-#ifndef BFS
-		ret.update();
-#endif
 		return ret;
 	}
 
@@ -213,11 +199,8 @@ public:
 		return false;
 	}
 	
-	bool done() {
-		ull tar=0;
-		for(PII p : goal)
-			tar |= (1ull<<pos(p));
-		return tar == hsh();
+	bool done(unordered_map<ull, ull> mp) {
+		return (mp[hsh()] & (1<<pos(player)));
 	}
 
 	bool operator<(const board b) const {
@@ -227,13 +210,9 @@ public:
 
 int board::n = 0, board::m=0;
 char board::mat[][N] = {};
-vector<PII> board::goal = vector<PII>();
 int board::cost[][N] = {};
-#ifdef BFS
-	queue<board> pque;
-#else
-	priority_queue<board> pque;
-#endif
+vector<PII> board::goal = vector<PII>();
+queue<board> que[2];
 
 int main() {
 	int lev=1;
@@ -244,47 +223,69 @@ int main() {
 		if(lev++ >= 100)
 			continue;
 
-		vis.clear();
-		while(!pque.empty())
-			pque.pop();
+		vis[0].clear(), vis[1].clear();
+		while(!que[0].empty())
+			que[0].pop();
+		while(!que[1].empty())
+			que[1].pop();
 
-		pque.push(start);
-		int maxsz = 0;
-		while(!pque.empty()) {
-			maxsz = max(maxsz, SZ(pque));
-#ifdef BFS
-			board bd = pque.front();
-#else
-			board bd = pque.top();
-#endif
-			//printf("%d %d\n", bd.player.F, bd.player.S);
-			if(bd.done()) {
-				printf("|| %d\n", maxsz);
-				bd.print();
-				break;
-			}
-			pque.pop();
+		que[0].push(start);
+		board finish = start;
+		finish.box.clear();
+		for(PII p : board::goal)
+			finish.box.insert(p);
+		for(PII p : board::goal)
 			for(int i=0; i<4; i++) {
-				if(alph[(i+2)%4] != bd.steps.back() and bd.valid(i)) {
-					board nxt = bd.move(i);
-					if(nxt.dead())
-						continue;
-					assert(SZ(nxt.box) == SZ(board::goal));
-					ull val = nxt.hsh();
-					/*
-					printf("|| %d: %llu\n", i, val);
-					for(auto p : nxt.box)
-						printf("** %d %d\n", p.F, p.S);
-					*/
-					int pos = board::pos(nxt.player);
-					if(vis.count(val) and (vis[val]&(1ull<<pos)) != 0)
-						continue;
-					//printf("## %d: %llu\n", i, val);
-					pque.push(nxt);
+				PII tmp = MP(p.F+dx[i], p.S+dy[i]);
+				if(board::mat[tmp.F][tmp.S] != '#') {
+					bool flag = true;
+					for(PII q : board::goal)
+						if(tmp==q) {
+							flag=false;
+							break;
+						}
+					if(flag) {
+						finish.player = tmp;
+						que[1].push(finish);
+					}
+				}
+			}
+		//puts("start search");
+		bool ok=false;
+		while(!ok and !que[0].empty() and !que[1].empty()) {
+			for(int z=0; !ok and z<2; z++) {
+				int sz = SZ(que[z]);
+				for(int _=0; _<sz; _++) {
+					board bd = que[z].front();
+					//printf("%d %d\n", bd.player.F, bd.player.S);
+					if(bd.done(vis[1-z])) {
+						bd.print();
+						ok=true;
+						break;
+					}
+					que[z].pop();
+					for(int i=0; i<4; i++)
+						if(alph[(i+2)%4] != bd.steps.back() and bd.valid(i, z)) {
+							board nxt = bd.move(i, z);
+							if(nxt.dead())
+								continue;
+							assert(SZ(nxt.box) == SZ(board::goal));
+							ull val = nxt.hsh();
+							/*
+							printf("|| %d: %llu\n", i, val);
+							for(auto p : nxt.box)
+								printf("** %d %d\n", p.F, p.S);
+							*/
+							int pos = board::pos(nxt.player);
+							if(vis[z].count(val) and (vis[z][val]&(1ull<<pos)) != 0)
+								continue;
+							//printf("## %d: %llu\n", i, val);
+							que[z].push(nxt);
 
-					if(!vis.count(val))
-						vis[val]=0;
-					vis[val] |= (1ull<<pos);
+							if(!vis[z].count(val))
+								vis[z][val]=0;
+							vis[z][val] |= (1ull<<pos);
+						}
 				}
 			}
 		}
