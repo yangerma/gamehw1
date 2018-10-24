@@ -96,7 +96,9 @@ public:
 			}
 		}
 		sort(ALL(goal));
+#ifndef BFS
 		st.update();
+#endif
 		return st;
 	}
 
@@ -122,7 +124,9 @@ public:
 		}
 		ret.steps.PB(ch);
 		ret.player = tmp;
+#ifndef BFS
 		ret.update();
+#endif
 		return ret;
 	}
 
@@ -203,8 +207,11 @@ public:
 int board::n = 0, board::m=0;
 char board::mat[][N] = {};
 vector<PII> board::goal = vector<PII>();
-priority_queue<board> pque;
-//queue<board> pque;
+#ifdef BFS
+	queue<board> pque;
+#else
+	priority_queue<board> pque;
+#endif
 
 int main() {
 	int lev=1;
@@ -223,7 +230,11 @@ int main() {
 		int maxsz = 0;
 		while(!pque.empty()) {
 			maxsz = max(maxsz, SZ(pque));
+#ifdef BFS
+			board bd = pque.front();
+#else
 			board bd = pque.top();
+#endif
 			//printf("%d %d\n", bd.player.F, bd.player.S);
 			if(bd.done()) {
 				printf("|| %d\n", maxsz);
