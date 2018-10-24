@@ -9,7 +9,6 @@ const int N = 55;
 const int dx[] = {1, 0, -1, 0};
 const int dy[] = {0, 1, 0, -1};
 const char alph[] = "drul";
-const ull LLMAX = 1ull<<62;
 
 unordered_map<ull, ull> vis;
 
@@ -97,8 +96,10 @@ public:
 				mat[i][j] = buf[j-1];
 			}
 		}
-		for(int i=0; i<n; i++)
-			for(int j=0; j<m; j++) {
+		for(int i=1; i<=n; i++)
+			for(int j=1; j<=m; j++) {
+				if(mat[i][j] == '#')
+					continue;
 				bool used[N] = {};
 				queue<PII> que;
 				que.push(MP(i, j));
@@ -109,6 +110,7 @@ public:
 					for(int _=0; _<sz; _++) {
 						PII p = que.front();
 						que.pop();
+						assert(p.F>0 and p.S>0);
 						for(PII q : goal)
 							if(p == q) {
 								cost[i][j] = cnt;
@@ -120,7 +122,7 @@ public:
 						for(int k=0; k<4; k++) {
 							PII tmp = MP(p.F+dx[k], p.S+dy[k]);
 							PII ttmp = MP(p.F-dx[k], p.S-dy[k]);
-							if(!used[pos(tmp)] and mat[tmp.F][tmp.S] != '#' and mat[ttmp.F][ttmp.S] != '#')
+							if(mat[tmp.F][tmp.S] != '#' and mat[ttmp.F][ttmp.S] != '#' and !used[pos(tmp)])
 								que.push(tmp);
 						}
 					}
@@ -179,6 +181,8 @@ public:
 	bool dead() {
 		int surr[N] = {};
 		for(PII p : box) {
+			if(cost[p.F][p.S] == INF)
+				return true;
 			for(int i=0; i<4; i++) {
 				PII tmp = MP(p.F+dx[i], p.S+dy[i]);
 				if(mat[tmp.F][tmp.S] == '#' or box.count(tmp))
@@ -205,7 +209,7 @@ public:
 		for(PII p : box) {
 			while(j<SZ(goal) and goal[j] < p)
 				j++;
-			if(p == goal[j])
+			if(j<SZ(goal) and p == goal[j])
 				continue;
 			if(gg(surr[pos(p)]))
 				return true;
@@ -257,7 +261,6 @@ int main() {
 #else
 			board bd = pque.top();
 #endif
-			//printf("%d %d\n", bd.player.F, bd.player.S);
 			if(bd.done()) {
 				printf("|| %d\n", maxsz);
 				bd.print();
