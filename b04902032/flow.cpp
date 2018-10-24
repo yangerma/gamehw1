@@ -31,12 +31,12 @@ struct Flow {
 		for(int i=0;i<n;i++)
 			e[i]=VI();
 	}
-	void add(int a,int b,int c,int d) {
-		//a to b ,maxflow=c, cost=d
-		eg[ei]=E(b,c,d);
+	void add(int a,int b,int c,int D) {
+		//a to b ,maxflow=c, cost=D
+		eg[ei]=E(b,c,D);
 		e[a].PB(ei);
 		ei++;
-		eg[ei]=E(a,0,-d);
+		eg[ei]=E(a,0,-D);
 		e[b].PB(ei);
 		ei++;
 	}

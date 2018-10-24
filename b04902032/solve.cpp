@@ -18,6 +18,11 @@ const char alph[] = "drul";
 unordered_map<ull, ull> vis;
 
 class board {
+private:
+	bool gg(int msk) {
+		return ((msk&3) | (msk>>2))==3;
+	}
+
 public:
 	static int n, m;
 	static char mat[N][N];
@@ -35,7 +40,7 @@ public:
 	ull hsh() {
 		ull ret=0;
 		for(PII p : box)
-			ret = ret*(n*m) + pos(p);
+			ret |= (1ull<<pos(p));
 		return ret;
 	}
 
@@ -135,11 +140,58 @@ public:
 			putchar('\n');
 		}
 	}
+
+	bool dead() {
+		int surr[N] = {};
+		for(PII p : box) {
+			for(int i=0; i<4; i++) {
+				PII tmp = MP(p.F+dx[i], p.S+dy[i]);
+				if(mat[tmp.F][tmp.S] == '#' or box.count(tmp))
+					surr[pos(p)] |= (1<<i);
+			}
+		}
+		stack<PII> stk;
+		for(PII p : box)
+			if(!gg(surr[pos(p)]))
+				stk.push(p);
+		while(!stk.empty()) {
+			PII p = stk.top();
+			stk.pop();
+			for(int i=0; i<4; i++) {
+				PII tmp = MP(p.F+dx[i], p.S+dy[i]);
+				if(box.count(tmp) and gg(surr[pos(tmp)])) {
+					surr[pos(tmp)] -= 1 << ((i+2)&3);
+					if(!gg(surr[pos(tmp)]))
+						stk.push(tmp);
+				}
+			}
+		}
+		int j=0;
+		for(PII p : box) {
+			while(j<SZ(goal) and goal[j] < p)
+				j++;
+			if(p == goal[j])
+				continue;
+			if(gg(surr[pos(p)]))
+				return true;
+			/*
+			int val=0;
+			for(int i=0; i<4; i++) {
+				PII tmp = MP(p.F+dx[i], p.S+dy[i]);
+				if(mat[tmp.F][tmp.S] == '#')
+					val |= 1<<(i&1);
+			}
+			if(val==3)
+				return true;
+			*/
+		}
+		return false;
+	}
 	
 	bool done() {
 		ull tar=0;
 		for(PII p : goal)
-			tar = tar*(n*m) + pos(p);
+			tar |= (1ull<<pos(p));
 		return tar == hsh();
 	}
 
@@ -160,20 +212,21 @@ int main() {
 		board start = board::init();
 		if(start.player == MP(0, 0))
 			break;
-			/*
 		if(lev++ >= 100)
 			continue;
 
-*/
 		vis.clear();
 		while(!pque.empty())
 			pque.pop();
 
 		pque.push(start);
+		int maxsz = 0;
 		while(!pque.empty()) {
+			maxsz = max(maxsz, SZ(pque));
 			board bd = pque.top();
 			//printf("%d %d\n", bd.player.F, bd.player.S);
 			if(bd.done()) {
+				printf("|| %d\n", maxsz);
 				bd.print();
 				break;
 			}
@@ -183,6 +236,8 @@ int main() {
 					continue;
 				if(bd.valid(i)) {
 					board nxt = bd.move(i);
+					if(nxt.dead())
+						continue;
 					assert(SZ(nxt.box) == SZ(board::goal));
 					ull val = nxt.hsh();
 					/*
