@@ -1,25 +1,21 @@
-/*
-#include<bits/stdc++.h>
-using namespace std;
-#define MP make_pair
-#define PB push_back
-*/
 #include "flow.cpp"
 typedef long long ull;
 typedef pair<int, int> PII;
 #define ALL(x) (x).begin(), (x).end()
+#define BFS
 
 const int N = 55;
 
 const int dx[] = {1, 0, -1, 0};
 const int dy[] = {0, 1, 0, -1};
 const char alph[] = "drul";
+const ull LLMAX = 1ull<<62;
 
 unordered_map<ull, ull> vis;
 
 class board {
 private:
-	bool gg(int msk) {
+	bool gg(const int msk) {
 		return ((msk&3) | (msk>>2))==3;
 	}
 
@@ -27,13 +23,14 @@ public:
 	static int n, m;
 	static char mat[N][N];
 	static vector<PII> goal;
+	static int cost[N][N];
 
 	int eval;
 	PII player;
 	set<PII> box;
 	string steps;
 	
-	static int pos(PII p) {
+	static int pos(const PII &p) {
 		return (p.F-1)*m + p.S-1;
 	}
 
@@ -65,6 +62,11 @@ public:
 			eval += abs(goal[j].F - ite->F) + abs(goal[j].S - ite->S);
 			j++;
 		}
+		/*
+		eval = 0;
+		for(PII p : box)
+			eval += cost[p.F][p.S];
+		*/
 	}
 
 	static board init() {
@@ -95,7 +97,36 @@ public:
 				mat[i][j] = buf[j-1];
 			}
 		}
-		sort(ALL(goal));
+		for(int i=0; i<n; i++)
+			for(int j=0; j<m; j++) {
+				bool used[N] = {};
+				queue<PII> que;
+				que.push(MP(i, j));
+				cost[i][j] = INF;
+				int cnt=0;
+				while(cost[i][j]==INF and !que.empty()) {
+					int sz = SZ(que);
+					for(int _=0; _<sz; _++) {
+						PII p = que.front();
+						que.pop();
+						for(PII q : goal)
+							if(p == q) {
+								cost[i][j] = cnt;
+								break;
+							}
+						if(cost[i][j] < INF)
+							break;
+						used[pos(p)] = true;
+						for(int k=0; k<4; k++) {
+							PII tmp = MP(p.F+dx[k], p.S+dy[k]);
+							PII ttmp = MP(p.F-dx[k], p.S-dy[k]);
+							if(!used[pos(tmp)] and mat[tmp.F][tmp.S] != '#' and mat[ttmp.F][ttmp.S] != '#')
+								que.push(tmp);
+						}
+					}
+					cnt++;
+				}
+			}
 #ifndef BFS
 		st.update();
 #endif
@@ -178,16 +209,6 @@ public:
 				continue;
 			if(gg(surr[pos(p)]))
 				return true;
-			/*
-			int val=0;
-			for(int i=0; i<4; i++) {
-				PII tmp = MP(p.F+dx[i], p.S+dy[i]);
-				if(mat[tmp.F][tmp.S] == '#')
-					val |= 1<<(i&1);
-			}
-			if(val==3)
-				return true;
-			*/
 		}
 		return false;
 	}
@@ -207,6 +228,7 @@ public:
 int board::n = 0, board::m=0;
 char board::mat[][N] = {};
 vector<PII> board::goal = vector<PII>();
+int board::cost[][N] = {};
 #ifdef BFS
 	queue<board> pque;
 #else
@@ -243,9 +265,7 @@ int main() {
 			}
 			pque.pop();
 			for(int i=0; i<4; i++) {
-				if(alph[(i+2)%4] == bd.steps.back())
-					continue;
-				if(bd.valid(i)) {
+				if(alph[(i+2)%4] != bd.steps.back() and bd.valid(i)) {
 					board nxt = bd.move(i);
 					if(nxt.dead())
 						continue;
@@ -261,6 +281,7 @@ int main() {
 						continue;
 					//printf("## %d: %llu\n", i, val);
 					pque.push(nxt);
+
 					if(!vis.count(val))
 						vis[val]=0;
 					vis[val] |= (1ull<<pos);
