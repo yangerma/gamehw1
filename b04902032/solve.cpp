@@ -1,7 +1,14 @@
-#include "flow.cpp"
-typedef long long ull;
-typedef pair<int, int> PII;
+#include<bits/stdc++.h>
+#define MP make_pair
+#define PB push_back
+#define F first
+#define S second
+#define SZ(x) ((int)(x).size())
 #define ALL(x) (x).begin(), (x).end()
+using namespace std;
+
+typedef pair<int,int> PII;
+typedef long long ull;
 
 const int N = 55;
 const pair<ull, char> END = MP(0ull, '\0');
@@ -225,12 +232,13 @@ vector<PII> board::goal = vector<PII>();
 queue<board> que[2];
 
 int main() {
-	int lev=1;
+	int lev=0;
 	while(true) {
 		board start = board::init();
 		if(start.player == MP(0, 0))
 			break;
-		if(lev++ >= 100)
+		lev++;
+		if(lev >= 100)
 			continue;
 		
 		//board::showmap();
@@ -275,7 +283,7 @@ int main() {
 				break;
 			}
 			que[z].pop();
-			for(int i=0; i<4; i++) {
+			for(int i=0; i<4; i++)
 				for(int j=0; j<=z; j++) {
 					if(j==0 and alph[i^2] == bd.last)
 						continue;
@@ -289,7 +297,6 @@ int main() {
 						vis[z][nxt.hsh()] = MP(bdhsh, nxt.last);
 					}
 				}
-			}
 		}
 	}
 }
