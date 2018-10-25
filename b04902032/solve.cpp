@@ -223,6 +223,24 @@ public:
 		return false;
 	}
 
+	static int difficulty() {
+		const int vx[] = {1, 1, 0, -1, -1, -1, 0, 1};
+		const int vy[] = {0, 1, 1, 1, 0, -1, -1, -1};
+		int ret=0;
+		for(int i=1; i<=n; i++)
+			for(int j=1; j<=m; j++) {
+				if(mat[i][j] == '#')
+					continue;
+				for(int k=0; k<7; k++) {
+					int x=i+vx[k], y=j+vy[k];
+					int u=i+vx[k+1], v=j+vy[k+1];
+					if(mat[x][y] != mat[u][v])
+						ret++;
+				}
+			}
+		return ret;
+	}
+
 	bool operator<(const board b) const {
 		return false;
 		//return SZ(steps)+eval > SZ(b.steps)+b.eval;
@@ -240,11 +258,13 @@ int main() {
 	int lev=0;
 	while(true) {
 		board start = board::init();
+		
 		if(start.player == MP(0, 0))
 			break;
 		lev++;
 		if(lev >= 100)
 			continue;
+		printf("||| %d %d\n", board::difficulty(), SZ(start.box));
 		
 		//board::showmap();
 		vis[0].clear(), vis[1].clear();
