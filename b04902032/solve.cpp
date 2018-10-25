@@ -1,4 +1,6 @@
 #include<bits/stdc++.h>
+#include<signal.h>
+#include<unistd.h>
 #define MP make_pair
 #define PB push_back
 #define F first
@@ -11,11 +13,17 @@ typedef pair<int,int> PII;
 typedef long long ull;
 
 const int N = 55;
+const int T = 15;
 const pair<ull, char> END = MP(0ull, '\0');
 
 const int dx[] = {1, 0, -1, 0};
 const int dy[] = {0, 1, 0, -1};
 const char alph[] = "drul";
+
+int arrn[T], arrm[T];
+char arrmat[T][N][N];
+int kase, finished;
+bool timeup;
 
 unordered_map<ull, pair<ull, char> > vis[2];
 
@@ -49,17 +57,15 @@ public:
 		return (ret<<6) | pos(player);
 	}
 
-	static board init() {
+	static board init(const int t) {
 		board ret;
-		ret.player=MP(0, 0);
 		ret.last = '\0';
-		if(scanf("%d%d", &n, &m) == EOF)
-			return ret;
+		n=arrn[t],m=arrm[t];
 		fill(mat[0], mat[N], '#');
 		goal.clear();
 		for(int i=1; i<=n; i++) {
 			char buf[N];
-			scanf("%s", buf);
+			strcpy(buf, arrmat[t][i-1]);
 			for(int j=1; j<=m; j++) {
 				if(buf[j-1] == '*' or buf[j-1] == '+' or buf[j-1] == '.') {
 					goal.PB(MP(i, j));
@@ -254,10 +260,23 @@ ull board::reach[N] = {};
 vector<PII> board::goal = vector<PII>();
 queue<board> que[2];
 
+void handler(int val) {
+	for(int _=finished; _<kase; _++)
+		printf("0\n\n");
+	timeup=true;
+}
+
 int main() {
+	alarm(59);
+	signal(SIGALRM, handler);
+	for(kase=0; scanf("%d%d", arrn+kase, arrm+kase) != EOF; kase++)
+		for(int i=0; i<arrn[kase]; i++)
+			scanf("%s", arrmat[kase][i]);
 	int lev=0;
-	while(true) {
-		board start = board::init();
+	finished=0;
+	timeup=false;
+	for(int t=0; t<kase; t++) {
+		board start = board::init(t);
 		
 		if(start.player == MP(0, 0))
 			break;
@@ -302,8 +321,11 @@ int main() {
 			board bd = que[z].front();
 			//printf("%d %d\n", bd.player.F, bd.player.S);
 			ull bdhsh = bd.hsh();
+			if(timeup)
+				return 0;
 			if(vis[1-z].count(bdhsh)) {
 				bd.print();
+				finished++;
 				fflush(stdout);
 				break;
 			}
