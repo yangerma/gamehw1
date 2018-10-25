@@ -30,7 +30,7 @@ public:
 	static char mat[N][N];
 	static vector<PII> goal;
 	static bool alive[N];
-	static bool reach[N];
+	static ull reach[N];
 
 	//int eval;
 	PII player;
@@ -79,7 +79,7 @@ public:
 			}
 		}
 		sort(ALL(goal));
-		memset(reach, false, sizeof(reach));
+		memset(reach, 0, sizeof(reach));
 		for(int i=1; i<=n; i++)
 			for(int j=1; j<=m; j++) {
 				if(mat[i][j] == '#')
@@ -92,7 +92,7 @@ public:
 				while(!que.empty()) {
 					PII p = que.front();
 					que.pop();
-					reach[pos(p)] = true;
+					reach[pos(p)] |= (1ull<<pos(st));
 					for(PII q : goal)
 						if(p == q)
 							alive[pos(st)] = true;
@@ -181,6 +181,11 @@ public:
 
 	bool dead() {
 		int surr[N] = {};
+		ull val = hsh()>>6;
+		for(PII p : goal) {
+			if(!(reach[pos(p)] & val))
+				return true;
+		}
 		for(PII p : box) {
 			if(!alive[pos(p)])
 				return true;
@@ -227,7 +232,7 @@ public:
 int board::n = 0, board::m=0;
 char board::mat[][N] = {};
 bool board::alive[N] = {};
-bool board::reach[N] = {};
+ull board::reach[N] = {};
 vector<PII> board::goal = vector<PII>();
 queue<board> que[2];
 
@@ -258,7 +263,7 @@ int main() {
 			for(int i=0; i<4; i++) {
 				PII tmp = MP(p.F+dx[i], p.S+dy[i]);
 				PII ttmp = MP(p.F+dx[i], p.S+dy[i]);
-				if(board::mat[tmp.F][tmp.S] != '#' and board::mat[ttmp.F][ttmp.S] != '#' and board::reach[board::pos(tmp)]) {
+				if(board::mat[tmp.F][tmp.S] != '#' and board::mat[ttmp.F][ttmp.S] != '#' and (board::reach[board::pos(tmp)]&(start.hsh()>>6)) ) {
 					bool flag = true;
 					for(PII q : board::goal)
 						if(tmp==q) {
