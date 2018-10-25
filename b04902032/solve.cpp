@@ -4,12 +4,13 @@ typedef pair<int, int> PII;
 #define ALL(x) (x).begin(), (x).end()
 
 const int N = 55;
+const pair<ull, char> END = MP(0ull, '\0');
 
 const int dx[] = {1, 0, -1, 0};
 const int dy[] = {0, 1, 0, -1};
 const char alph[] = "drul";
 
-unordered_map<ull, ull> vis[2];
+unordered_map<ull, pair<ull, char> > vis[2];
 
 class board {
 private:
@@ -23,10 +24,11 @@ public:
 	static vector<PII> goal;
 	static int cost[N][N];
 
-	int eval;
+	//int eval;
 	PII player;
 	set<PII> box;
-	string steps;
+	//string steps;
+	char last;
 	
 	static int pos(const PII &p) {
 		return (p.F-1)*m + p.S-1;
@@ -36,12 +38,13 @@ public:
 		ull ret=0;
 		for(PII p : box)
 			ret |= (1ull<<pos(p));
-		return ret;
+		return (ret<<6) | pos(player);
 	}
 
 	static board init() {
 		board st;
 		st.player=MP(0, 0);
+		st.last = '\0';
 		if(scanf("%d%d", &n, &m) == EOF)
 			return st;
 		fill(mat[0], mat[N], '#');
@@ -136,7 +139,7 @@ public:
 				ret.box.insert(player);
 				ch -= 32;
 			}
-			ret.steps += ch;
+			ret.last = ch;
 			ret.player = tmp;
 		} else {
 			PII tmp = MP(ret.player.F+dx[mv], ret.player.S+dy[mv]);
@@ -146,17 +149,22 @@ public:
 				ret.box.insert(MP(tmp.F+dx[mv], tmp.S+dy[mv]));
 				ch -= 32;
 			}
-			ret.steps += ch;
+			ret.last = ch;
 			ret.player = tmp;
 		}
 		return ret;
 	}
 
 	void print() {
-		printf("%d\n", SZ(steps));
-		for(char ch : steps)
-			putchar(ch);
-		putchar('\n');
+		ull mid = hsh();
+		string head, tail;
+		for(ull i=mid; vis[0][i].S; i=vis[0][i].F)
+			head += vis[0][i].S;
+		for(ull i=mid; vis[1][i].S; i=vis[1][i].F)
+			tail += vis[1][i].S;
+		printf("%d\n", SZ(head)+SZ(tail));
+		reverse(ALL(head));
+		cout << head+tail << endl;
 	}
 
 	static void showmap() {
@@ -207,13 +215,10 @@ public:
 		}
 		return false;
 	}
-	
-	bool done(unordered_map<ull, ull> &mp) {
-		return (mp[hsh()] & (1ull<<pos(player)));
-	}
 
 	bool operator<(const board b) const {
-		return SZ(steps)+eval > SZ(b.steps)+b.eval;
+		return false;
+		//return SZ(steps)+eval > SZ(b.steps)+b.eval;
 	}
 };
 
@@ -240,13 +245,11 @@ int main() {
 			que[1].pop();
 
 		que[0].push(start);
-		vis[0][start.hsh()] = (1ull<<board::pos(start.player));
+		vis[0][start.hsh()] = END;
 		board finish = start;
 		finish.box.clear();
 		for(PII p : board::goal)
 			finish.box.insert(p);
-		int goalhsh = finish.hsh();
-		vis[1][goalhsh] = 0;
 		for(PII p : board::goal)
 			for(int i=0; i<4; i++) {
 				PII tmp = MP(p.F+dx[i], p.S+dy[i]);
@@ -260,7 +263,7 @@ int main() {
 						}
 					if(flag) {
 						finish.player = tmp;
-						vis[1][goalhsh] |= (1ull<<board::pos(finish.player));
+						vis[1][finish.hsh()] = END;
 						que[1].push(finish);
 					}
 				}
@@ -269,7 +272,8 @@ int main() {
 			int z = (SZ(que[1]) < SZ(que[0]));
 			board bd = que[z].front();
 			//printf("%d %d\n", bd.player.F, bd.player.S);
-			if(bd.done(vis[1-z])) {
+			ull bdhsh = bd.hsh();
+			if(vis[1-z].count(bdhsh)) {
 				bd.print();
 				fflush(stdout);
 				break;
@@ -277,33 +281,20 @@ int main() {
 			que[z].pop();
 			for(int i=0; i<4; i++) {
 				for(int j=0; j<=z; j++) {
-					if(j==0 and alph[i^2] == bd.steps.back())
+					if(j==0 and alph[i^2] == bd.last)
 						continue;
 					if(bd.valid(i, z, j)) {
-						//if(z == 1)
-							//printf("|| (%d, %d), dir: %d, pull: %d\n", bd.player.F, bd.player.S, i, j);
 						board nxt = bd.move(i, z, j);
 						if(z==0 and nxt.dead())
 							continue;
-						ull val = nxt.hsh();
-						/*
-						printf("|| %d: %llu\n", i, val);
-						for(auto p : nxt.box)
-							printf("** %d %d\n", p.F, p.S);
-						*/
-						int pos = board::pos(nxt.player);
-						if(vis[z].count(val) and (vis[z][val]&(1ull<<pos)) != 0)
+						if(vis[z].count(nxt.hsh()))
 							continue;
-						//printf("## %d: %llu\n", i, val);
 						que[z].push(nxt);
 
-						if(!vis[z].count(val))
-							vis[z][val]=0;
-						vis[z][val] |= (1ull<<pos);
+						vis[z][nxt.hsh()] = MP(bdhsh, nxt.last);
 					}
 				}
 			}
 		}
-		//puts("-----------");
 	}
 }
