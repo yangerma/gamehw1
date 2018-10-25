@@ -103,11 +103,14 @@ public:
 		return st;
 	}
 
-	bool valid(const int mv, bool rev=false) {
+	bool valid(const int mv, bool rev=false, bool pull=false) {
 		if(rev) {
-			int op = (mv+2)&3;
+			int op = (mv+2)%4;
 			PII tmp = MP(player.F+dx[op], player.S+dy[op]);
+			PII ttmp = MP(player.F+dx[mv], player.S+dy[mv]);
 			if(mat[tmp.F][tmp.S] == '#' or box.count(tmp))
+				return false;
+			if(pull and !box.count(ttmp))
 				return false;
 		} else {
 			PII tmp = MP(player.F+dx[mv], player.S+dy[mv]);
@@ -157,6 +160,8 @@ public:
 	}
 
 	static void showmap() {
+		for(PII p : goal)
+			mat[p.F][p.S] = '.';
 		for(int i=0; i<=n; i++) {
 			for(int j=0; j<=m; j++)
 				putchar(mat[i][j]);
@@ -226,7 +231,8 @@ int main() {
 			break;
 		if(lev++ >= 100)
 			continue;
-
+		
+		//board::showmap();
 		vis[0].clear(), vis[1].clear();
 		while(!que[0].empty())
 			que[0].pop();
@@ -234,14 +240,18 @@ int main() {
 			que[1].pop();
 
 		que[0].push(start);
+		vis[0][start.hsh()] = (1ull<<board::pos(start.player));
 		board finish = start;
 		finish.box.clear();
 		for(PII p : board::goal)
 			finish.box.insert(p);
+		int goalhsh = finish.hsh();
+		vis[1][goalhsh] = 0;
 		for(PII p : board::goal)
 			for(int i=0; i<4; i++) {
 				PII tmp = MP(p.F+dx[i], p.S+dy[i]);
-				if(board::mat[tmp.F][tmp.S] != '#') {
+				PII ttmp = MP(p.F+dx[i], p.S+dy[i]);
+				if(board::mat[tmp.F][tmp.S] != '#' and board::mat[ttmp.F][ttmp.S] != '#') {
 					bool flag = true;
 					for(PII q : board::goal)
 						if(tmp==q) {
@@ -250,32 +260,42 @@ int main() {
 						}
 					if(flag) {
 						finish.player = tmp;
+						vis[1][goalhsh] |= (1ull<<board::pos(finish.player));
 						que[1].push(finish);
 					}
 				}
 			}
 		puts("start search");
-		int states=0;
-		while(!que[0].empty()) {
+		int states1=0;
+		int states2=0;
+		int states3=0;
+		while(!que[0].empty() and !que[1].empty()) {
 			assert(!que[1].empty());
-			states++;
-			int z = (SZ(que[1])<SZ(que[0]));
+			//states++;
+			int z = (SZ(que[1])<=SZ(que[0]));
 			board bd = que[z].front();
 			//printf("%d %d\n", bd.player.F, bd.player.S);
 			if(bd.done(vis[1-z])) {
-				printf("|| %d\n", states);
-				bd.print();
+				printf("|| %d %d %d\n", states1, states2, states3);
+				//bd.print();
+				fflush(stdout);
 				break;
 			}
 			que[z].pop();
 			for(int i=0; i<4; i++) {
 				for(int j=0; j<=z; j++) {
+					/*
 					if(j==0 and alph[(i+2)%4] == bd.steps.back())
 						continue;
-					if(bd.valid(i, z)) {
+					*/
+					if(bd.valid(i, z, j)) {
+						//if(z == 1)
+							//printf("|| (%d, %d), dir: %d, pull: %d\n", bd.player.F, bd.player.S, i, j);
 						board nxt = bd.move(i, z, j);
+						states1++;
 						if(z==0 and nxt.dead())
 							continue;
+						states2++;
 						assert(SZ(nxt.box) == SZ(board::goal));
 						ull val = nxt.hsh();
 						/*
@@ -286,6 +306,7 @@ int main() {
 						int pos = board::pos(nxt.player);
 						if(vis[z].count(val) and (vis[z][val]&(1ull<<pos)) != 0)
 							continue;
+						states3++;
 						//printf("## %d: %llu\n", i, val);
 						que[z].push(nxt);
 
